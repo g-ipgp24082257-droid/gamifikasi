@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misi 2: Jom Baca, Wira Kesihatan!</title>
+
+    <!-- Google Font Lexend for single-story 'a' -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome Icons & Tailwind CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Lexend', 'sans-serif'],
+                    },
+                    colors: {
+                        mint: { 100: '#e6fffa', 200: '#b2f5ea', 400: '#319795', 500: '#2e8540', 600: '#234e52' },
+                        softpink: { 100: '#fff5f5', 200: '#fed7d7', 400: '#feb2b2', 500: '#e53e3e' },
+                        softcyan: { 100: '#e6fffa', 300: '#9decf9', 500: '#00a3c4' },
+                        softyellow: { 100: '#fffff0', 300: '#fefcbf', 500: '#d69e2e' },
+                        softpurple: { 100: '#faf5ff', 300: '#e9d8fd', 500: '#805ad5' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Lexend', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #f0fdf4;
+            color: #1f2937;
+        }
+
+        /* Enforce lowercase for pedagogical special education reading */
+        .force-lowercase {
+            text-transform: lowercase !important;
+        }
+
+        /* Drag & Drop Styles */
+        .draggable-item {
+            touch-action: none;
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+            transform: scale(1.08);
+        }
+        .draggable-item.selected-tap {
+            ring: 4px solid #3b82f6;
+            transform: scale(1.05);
+            background-color: #dbeafe !important;
+        }
+
+        .drop-target {
+            transition: all 0.2s ease;
+        }
+        .drop-target.drag-over {
+            background-color: #bbf7d0 !important;
+            border-color: #16a34a !important;
+            transform: scale(1.02);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a7f3d0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #34d399;
+        }
+
+        .btn-bounce:active {
+            transform: scale(0.95);
+        }
+
+        /* Glassmorphism card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(209, 250, 229, 0.8);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-gradient-to-b from-teal-50 via-emerald-50 to-sky-50 force-lowercase text-slate-800">
+
+    <!-- AUDIO PLAYER HIDDEN CONTAINERS -->
+    <audio id="bgmAudio" loop></audio>
+    <audio id="sfxAudio"></audio>
+
+    <!-- TOP BAR / HEADER -->
+    <header class="bg-white/80 backdrop-blur-md border-b-4 border-teal-200 sticky top-0 z-40 px-3 py-2 shadow-sm">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="showScreen('home')">
+                <div class="w-10 h-10 rounded-2xl bg-teal-500 text-white flex items-center justify-center font-bold text-xl shadow-md border-2 border-teal-300">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base md:text-lg text-teal-800 leading-tight">misi 2: jom baca, wira kesihatan!</h1>
+                    <p class="text-xs text-teal-600 font-semibold">pemulihan khas • modul kesihatan</p>
+                </div>
+            </div>
+
+            <!-- Student Profile Active Pill & Score -->
+            <div id="activeStudentPill" class="hidden flex items-center bg-teal-100 border border-teal-300 rounded-full px-3 py-1 text-xs md:text-sm font-bold text-teal-800 shadow-inner">
+                <img id="pillAvatar" src="" class="w-6 h-6 rounded-full object-cover mr-2 border border-teal-400" alt="avatar">
+                <span id="pillName" class="mr-3">nama murid</span>
+                <span class="bg-teal-600 text-white px-2 py-0.5 rounded-full text-xs" id="pillScore">markah: 0/100</span>
+            </div>
+
+            <!-- Controls (BGM, Teacher Panel Toggle, Reset) -->
+            <div class="flex items-center space-x-2">
+                <!-- BGM Controls -->
+                <div class="flex items-center bg-emerald-100/80 p-1.5 rounded-2xl border border-emerald-300 space-x-1">
+                    <button id="bgmToggleBtn" onclick="toggleBGM()" class="w-8 h-8 rounded-xl bg-white text-teal-700 hover:bg-teal-50 flex items-center justify-center shadow-sm text-xs font-bold" title="Main/Henti Muzik Latar">
+                        <i class="fa-solid fa-music"></i>
+                    </button>
+                    <input type="range" id="bgmVolume" min="0" max="1" step="0.05" value="0.3" onchange="updateBGMVolume(this.value)" class="w-12 md:w-16 h-2 bg-teal-200 rounded-lg appearance-none cursor-pointer accent-teal-600" title="Kelantangan BGM">
+                </div>
+
+                <!-- Mod Guru Toggle Button -->
+                <button onclick="toggleTeacherPanel()" class="bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold px-3 py-1.5 rounded-2xl text-xs flex items-center shadow border-2 border-amber-300 transition-all btn-bounce">
+                    <i class="fa-solid fa-sliders mr-1.5"></i>
+                    <span>mod guru</span>
+                </button>
+
+                <!-- Laporan Button -->
+                <button onclick="showReportModal()" class="bg-sky-500 hover:bg-sky-600 text-white font-bold px-3 py-1.5 rounded-2xl text-xs flex items-center shadow border-2 border-sky-300 transition-all btn-bounce">
+                    <i class="fa-solid fa-file-invoice mr-1.5"></i>
+                    <span>rekod</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-5xl mx-auto w-full p-3 md:p-6 flex-grow flex flex-col justify-center">
+
+        <!-- ==================== SCREEN 1: SKRIN UTAMA / PILIH MURID ==================== -->
+        <section id="screen-home" class="screen-section space-y-6 text-center">
+            
+            <!-- Doctor Welcome Header -->
+            <div class="glass-card p-6 rounded-3xl shadow-xl max-w-2xl mx-auto border-4 border-teal-200 relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 opacity-10 text-teal-600 text-9xl pointer-events-none">
+                    <i class="fa-solid fa-hospital-user"></i>
+                </div>
+                
+                <div class="flex flex-col md:flex-row items-center gap-4 justify-center">
+                    <div class="relative group">
+                        <img id="doctorAvatarImg" src="https://placehold.co/150x150/a7f3d0/047857?text=Doktor+Aina" alt="Doktor Aina" class="w-28 h-28 md:w-32 md:h-32 rounded-3xl object-cover border-4 border-teal-400 shadow-md">
+                        <button onclick="document.getElementById('uploadDoctorInput').click()" class="absolute -bottom-2 -right-2 bg-amber-400 hover:bg-amber-500 text-slate-900 p-2 rounded-xl text-xs font-bold shadow border border-white" title="Tukar Gambar Doktor Aina">
+                            <i class="fa-solid fa-camera"></i>
+                        </button>
+                        <input type="file" id="uploadDoctorInput" accept="image/*" class="hidden" onchange="handleDoctorUpload(event)">
+                    </div>
+                    <div class="text-center md:text-left space-y-1">
+                        <span class="bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full border border-teal-300 inline-block">klinik kesihatan cilik</span>
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-teal-900">selamat datang wira kesihatan!</h2>
+                        <p class="text-sm text-slate-600 font-medium">pilih profil anda sebelum memulakan aktiviti membaca di klinik doktor aina.</p>
+                        
+                        <!-- Teacher audio instruction button -->
+                        <div class="pt-2 flex justify-center md:justify-start">
+                            <button id="btnAudioWelcome" onclick="playAudio('welcome')" class="bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center shadow-md transition btn-bounce">
+                                <i class="fa-solid fa-volume-high mr-2 text-yellow-300"></i>
+                                <span>dengar arahan doktor aina</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Profiles Selection Header -->
+            <div>
+                <h3 class="text-lg font-bold text-teal-900 mb-3 flex items-center justify-center">
+                    <i class="fa-solid fa-id-card text-teal-500 mr-2"></i>
+                    pilih profil murid pemulihan khas:
+                </h3>
+
+                <!-- 4 Student Cards Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                    <!-- Student 1 -->
+                    <div class="student-card bg-white hover:bg-pink-50 p-4 rounded-3xl border-4 border-pink-200 shadow-md hover:shadow-lg transition cursor-pointer flex flex-col items-center group relative" onclick="selectStudent(0)">
+                        <div class="relative mb-2">
+                            <img id="studentImg-0" src="https://placehold.co/120x120/fbcfe8/be185d?text=Nur+Amirah" class="w-20 h-20 rounded-2xl object-cover border-2 border-pink-300 shadow" alt="Nur Amirah">
+                            <button onclick="event.stopPropagation(); triggerStudentUpload(0);" class="absolute -bottom-1 -right-1 bg-pink-400 hover:bg-pink-500 text-white p-1.5 rounded-lg text-xs shadow" title="Muat Naik Gambar Nur Amirah">
+                                <i class="fa-solid fa-image"></i>
+                            </button>
+                        </div>
+                        <span class="font-extrabold text-pink-700 text-sm">🌸 nur amirah</span>
+                        <span class="text-xs text-slate-500 mt-1 font-semibold" id="studentScore-0">skor: 0/100</span>
+                    </div>
+
+                    <!-- Student 2 -->
+                    <div class="student-card bg-white hover:bg-purple-50 p-4 rounded-3xl border-4 border-purple-200 shadow-md hover:shadow-lg transition cursor-pointer flex flex-col items-center group relative" onclick="selectStudent(1)">
+                        <div class="relative mb-2">
+                            <img id="studentImg-1" src="https://placehold.co/120x120/e9d8fd/6b21a8?text=Siti+Ayu" class="w-20 h-20 rounded-2xl object-cover border-2 border-purple-300 shadow" alt="Siti Ayu">
+                            <button onclick="event.stopPropagation(); triggerStudentUpload(1);" class="absolute -bottom-1 -right-1 bg-purple-400 hover:bg-purple-500 text-white p-1.5 rounded-lg text-xs shadow" title="Muat Naik Gambar Siti Ayu">
+                                <i class="fa-solid fa-image"></i>
+                            </button>
+                        </div>
+                        <span class="font-extrabold text-purple-700 text-sm">🎀 siti ayu</span>
+                        <span class="text-xs text-slate-500 mt-1 font-semibold" id="studentScore-1">skor: 0/100</span>
+                    </div>
+
+                    <!-- Student 3 -->
+                    <div class="student-card bg-white hover:bg-sky-50 p-4 rounded-3xl border-4 border-sky-200 shadow-md hover:shadow-lg transition cursor-pointer flex flex-col items-center group relative" onclick="selectStudent(2)">
+                        <div class="relative mb-2">
+                            <img id="studentImg-2" src="https://placehold.co/120x120/bae6fd/0369a1?text=Adam+Mikail" class="w-20 h-20 rounded-2xl object-cover border-2 border-sky-300 shadow" alt="Adam Mikail">
+                            <button onclick="event.stopPropagation(); triggerStudentUpload(2);" class="absolute -bottom-1 -right-1 bg-sky-400 hover:bg-sky-500 text-white p-1.5 rounded-lg text-xs shadow" title="Muat Naik Gambar Adam Mikail">
+                                <i class="fa-solid fa-image"></i>
+                            </button>
+                        </div>
+                        <span class="font-extrabold text-sky-700 text-sm">💙 adam mikail</span>
+                        <span class="text-xs text-slate-500 mt-1 font-semibold" id="studentScore-2">skor: 0/100</span>
+                    </div>
+
+                    <!-- Student 4 -->
+                    <div class="student-card bg-white hover:bg-emerald-50 p-4 rounded-3xl border-4 border-emerald-200 shadow-md hover:shadow-lg transition cursor-pointer flex flex-col items-center group relative" onclick="selectStudent(3)">
+                        <div class="relative mb-2">
+                            <img id="studentImg-3" src="https://placehold.co/120x120/a7f3d0/047857?text=Fateh+Haziq" class="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-300 shadow" alt="Fateh Haziq">
+                            <button onclick="event.stopPropagation(); triggerStudentUpload(3);" class="absolute -bottom-1 -right-1 bg-emerald-400 hover:bg-emerald-500 text-white p-1.5 rounded-lg text-xs shadow" title="Muat Naik Gambar Fateh Haziq">
+                                <i class="fa-solid fa-image"></i>
+                            </button>
+                        </div>
+                        <span class="font-extrabold text-emerald-700 text-sm">💚 fateh haziq</span>
+                        <span class="text-xs text-slate-500 mt-1 font-semibold" id="studentScore-3">skor: 0/100</span>
+                    </div>
+                </div>
+                <input type="file" id="uploadStudentInput" accept="image/*" class="hidden" onchange="handleStudentUpload(event)">
+            </div>
+
+            <!-- Activity Menu Selection Buttons -->
+            <div id="activityMenu" class="hidden space-y-4 pt-4 border-t-2 border-teal-100 max-w-3xl mx-auto">
+                <h3 class="text-lg font-bold text-teal-900">pilih aktiviti membaca:</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Activity 1 -->
+                    <button onclick="startActivity(1)" class="bg-gradient-to-br from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white p-5 rounded-3xl shadow-lg border-b-4 border-teal-700 text-left flex flex-col justify-between transition btn-bounce">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="bg-white/30 text-white text-xs font-bold px-2.5 py-1 rounded-full">aktiviti 1</span>
+                            <i class="fa-solid fa-puzzle-piece text-2xl text-yellow-300"></i>
+                        </div>
+                        <h4 class="font-extrabold text-lg leading-tight">heret & lepas suku kata</h4>
+                        <p class="text-xs opacity-90 mt-1">susun suku kata beracak (sihat, mulut, perut, jatuh)</p>
+                    </button>
+
+                    <!-- Activity 2 -->
+                    <button onclick="startActivity(2)" class="bg-gradient-to-br from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white p-5 rounded-3xl shadow-lg border-b-4 border-blue-700 text-left flex flex-col justify-between transition btn-bounce">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="bg-white/30 text-white text-xs font-bold px-2.5 py-1 rounded-full">aktiviti 2</span>
+                            <i class="fa-solid fa-circle-check text-2xl text-yellow-300"></i>
+                        </div>
+                        <h4 class="font-extrabold text-lg leading-tight">baca & pilih jawapan</h4>
+                        <p class="text-xs opacity-90 mt-1">dengar & pilih (sakit, lemah, lapar, darah)</p>
+                    </button>
+
+                    <!-- Activity 3 -->
+                    <button onclick="startActivity(3)" class="bg-gradient-to-br from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600 text-white p-5 rounded-3xl shadow-lg border-b-4 border-indigo-700 text-left flex flex-col justify-between transition btn-bounce">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="bg-white/30 text-white text-xs font-bold px-2.5 py-1 rounded-full">aktiviti 3</span>
+                            <i class="fa-solid fa-microphone-lines text-2xl text-yellow-300"></i>
+                        </div>
+                        <h4 class="font-extrabold text-lg leading-tight">sebut suku kata satu-satu</h4>
+                        <p class="text-xs opacity-90 mt-1">sebutan dibimbing (ku-lit, ma-nis, ko-tor, ke-cil)</p>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN 2: AKTIVITI 1 (DRAG & DROP) ==================== -->
+        <section id="screen-act1" class="screen-section hidden space-y-4">
+            <!-- Header bar for Activity -->
+            <div class="flex items-center justify-between bg-emerald-100 p-3 rounded-2xl border-2 border-emerald-300">
+                <button onclick="showScreen('home')" class="bg-white hover:bg-emerald-50 text-emerald-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-emerald-300 shadow-sm btn-bounce">
+                    <i class="fa-solid fa-arrow-left mr-1.5"></i> kembali
+                </button>
+                <span class="font-extrabold text-emerald-900 text-sm md:text-base">aktiviti 1: heret & lepas suku kata</span>
+                <span id="act1Progress" class="bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full">soalan 1 / 4</span>
+            </div>
+
+            <!-- Question Card -->
+            <div class="glass-card p-5 md:p-6 rounded-3xl shadow-xl border-4 border-emerald-200 text-center max-w-3xl mx-auto space-y-4">
+                
+                <!-- Instruction & Audio -->
+                <div class="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 flex flex-col md:flex-row items-center justify-between gap-3">
+                    <p id="act1InstructionText" class="font-bold text-slate-700 text-sm md:text-base text-left">
+                        heret suku kata beracak di bawah dan lepaskan mengikut urutan perkataan yang betul.
+                    </p>
+                    <button onclick="playCurrentQuestionAudio(1)" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center shadow-md shrink-0 btn-bounce">
+                        <i class="fa-solid fa-volume-high mr-2 text-yellow-300"></i>
+                        <span>dengar arahan</span>
+                    </button>
+                </div>
+
+                <!-- Question Image Display & Upload -->
+                <div class="relative inline-block group">
+                    <img id="act1QuestionImg" src="https://placehold.co/300x200/d1fae5/047857?text=Gambar+Soalan" class="w-48 h-36 md:w-56 md:h-40 rounded-2xl object-cover border-4 border-emerald-300 shadow mx-auto" alt="Gambar Soalan">
+                    <button onclick="triggerQuestionImgUpload(1)" class="absolute bottom-2 right-2 bg-amber-400 hover:bg-amber-500 text-slate-900 text-xs font-bold px-2.5 py-1.5 rounded-xl shadow border border-white flex items-center">
+                        <i class="fa-solid fa-camera mr-1"></i> <span>upload gambar</span>
+                    </button>
+                </div>
+
+                <!-- Drop Targets Zone -->
+                <div class="space-y-2">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">kotak jawapan:</p>
+                    <div id="act1DropZone" class="flex justify-center gap-3 min-h-[70px] p-2 bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 items-center">
+                        <!-- Drop target slots generated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Draggable Syllables Source Zone -->
+                <div class="space-y-2 pt-2">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">pilihan suku kata (pilih/heret):</p>
+                    <div id="act1SourceZone" class="flex flex-wrap justify-center gap-3 min-h-[70px] p-3 bg-emerald-50 rounded-2xl border border-emerald-200 items-center">
+                        <!-- Draggable tiles generated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Submit / Check Button -->
+                <div class="pt-3 flex justify-center space-x-3">
+                    <button onclick="resetAct1CurrentQuestion()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-2xl text-xs md:text-sm shadow transition btn-bounce">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> rehatkan / semula
+                    </button>
+                    <button onclick="checkAct1Answer()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold px-6 py-2.5 rounded-2xl text-sm md:text-base shadow-lg border-b-4 border-emerald-700 transition btn-bounce">
+                        semak jawapan <i class="fa-solid fa-check ml-1.5"></i>
+                    </button>
+                </div>
+
+                <div id="act1Feedback" class="text-sm font-extrabold h-6"></div>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN 3: AKTIVITI 2 (BACA & PILIH) ==================== -->
+        <section id="screen-act2" class="screen-section hidden space-y-4">
+            <!-- Header bar -->
+            <div class="flex items-center justify-between bg-sky-100 p-3 rounded-2xl border-2 border-sky-300">
+                <button onclick="showScreen('home')" class="bg-white hover:bg-sky-50 text-sky-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-sky-300 shadow-sm btn-bounce">
+                    <i class="fa-solid fa-arrow-left mr-1.5"></i> kembali
+                </button>
+                <span class="font-extrabold text-sky-900 text-sm md:text-base">aktiviti 2: baca & pilih jawapan</span>
+                <span id="act2Progress" class="bg-sky-600 text-white text-xs font-bold px-3 py-1 rounded-full">soalan 1 / 4</span>
+            </div>
+
+            <!-- Question Card -->
+            <div class="glass-card p-5 md:p-6 rounded-3xl shadow-xl border-4 border-sky-200 text-center max-w-3xl mx-auto space-y-4">
+                
+                <!-- Instruction -->
+                <div class="bg-sky-50 p-3.5 rounded-2xl border border-sky-200 flex flex-col md:flex-row items-center justify-between gap-3">
+                    <p id="act2InstructionText" class="font-bold text-slate-700 text-sm md:text-base text-left">
+                        tekan butang sebutan guru dahulu untuk membuka pilihan jawapan, kemudian pilih perkataan yang betul.
+                    </p>
+                    <button id="act2ListenBtn" onclick="playCurrentQuestionAudio(2)" class="bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center shadow-md shrink-0 btn-bounce animate-bounce">
+                        <i class="fa-solid fa-volume-high mr-2 text-yellow-300 text-base"></i>
+                        <span>1. dengar sebutan guru</span>
+                    </button>
+                </div>
+
+                <!-- Question Image Display & Upload -->
+                <div class="relative inline-block group">
+                    <img id="act2QuestionImg" src="https://placehold.co/300x200/bae6fd/0369a1?text=Gambar+Soalan" class="w-48 h-36 md:w-56 md:h-40 rounded-2xl object-cover border-4 border-sky-300 shadow mx-auto" alt="Gambar Soalan">
+                    <button onclick="triggerQuestionImgUpload(2)" class="absolute bottom-2 right-2 bg-amber-400 hover:bg-amber-500 text-slate-900 text-xs font-bold px-2.5 py-1.5 rounded-xl shadow border border-white flex items-center">
+                        <i class="fa-solid fa-camera mr-1"></i> <span>upload gambar</span>
+                    </button>
+                </div>
+
+                <!-- Options Grid (Locked until audio listened) -->
+                <div class="space-y-2">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">2. pilih perkataan yang didengar:</p>
+                    <div id="act2OptionsContainer" class="grid grid-cols-2 gap-3 max-w-lg mx-auto opacity-50 pointer-events-none transition-all">
+                        <!-- Option buttons generated dynamically -->
+                    </div>
+                </div>
+
+                <div id="act2Feedback" class="text-sm font-extrabold h-6"></div>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN 4: AKTIVITI 3 (SEBUT SUKU KATA) ==================== -->
+        <section id="screen-act3" class="screen-section hidden space-y-4">
+            <!-- Header bar -->
+            <div class="flex items-center justify-between bg-purple-100 p-3 rounded-2xl border-2 border-purple-300">
+                <button onclick="showScreen('home')" class="bg-white hover:bg-purple-50 text-purple-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-purple-300 shadow-sm btn-bounce">
+                    <i class="fa-solid fa-arrow-left mr-1.5"></i> kembali
+                </button>
+                <span class="font-extrabold text-purple-900 text-sm md:text-base">aktiviti 3: sebut suku kata satu-satu</span>
+                <span id="act3Progress" class="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">soalan 1 / 4</span>
+            </div>
+
+            <!-- Question Card -->
+            <div class="glass-card p-5 md:p-6 rounded-3xl shadow-xl border-4 border-purple-200 text-center max-w-3xl mx-auto space-y-5">
+                
+                <!-- Instruction -->
+                <div class="bg-purple-50 p-3.5 rounded-2xl border border-purple-200 text-left">
+                    <p id="act3InstructionText" class="font-bold text-slate-700 text-sm md:text-base">
+                        dengar cikgu sebut suku kata satu per satu, kemudian ikut baca dan tekan butang "saya dah baca".
+                    </p>
+                </div>
+
+                <!-- Question Image & Upload -->
+                <div class="relative inline-block group">
+                    <img id="act3QuestionImg" src="https://placehold.co/300x200/e9d8fd/6b21a8?text=Gambar+Soalan" class="w-48 h-36 md:w-56 md:h-40 rounded-2xl object-cover border-4 border-purple-300 shadow mx-auto" alt="Gambar Soalan">
+                    <button onclick="triggerQuestionImgUpload(3)" class="absolute bottom-2 right-2 bg-amber-400 hover:bg-amber-500 text-slate-900 text-xs font-bold px-2.5 py-1.5 rounded-xl shadow border border-white flex items-center">
+                        <i class="fa-solid fa-camera mr-1"></i> <span>upload gambar</span>
+                    </button>
+                </div>
+
+                <!-- Individual Syllable Sound Buttons -->
+                <div class="space-y-2">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">tekan untuk dengar suku kata:</p>
+                    <div id="act3SyllablesContainer" class="flex justify-center gap-4 items-center flex-wrap">
+                        <!-- Dynamic buttons for individual syllables e.g., [ku] + [lit] -->
+                    </div>
+                </div>
+
+                <!-- Combined Word Display & Confirmation -->
+                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 max-w-md mx-auto space-y-3">
+                    <div class="text-xs font-bold text-amber-800 uppercase">perkataan penuh:</div>
+                    <div id="act3FullWord" class="text-3xl font-extrabold text-amber-900 tracking-wider">
+                        ku + lit = kulit
+                    </div>
+
+                    <button onclick="markAct3Complete()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold px-5 py-3 rounded-2xl text-sm shadow-md border-b-4 border-emerald-700 transition btn-bounce flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-thumbs-up text-lg text-yellow-300"></i>
+                        <span>saya dah sebut / saya dah baca!</span>
+                    </button>
+                </div>
+
+                <div id="act3Feedback" class="text-sm font-extrabold h-6"></div>
+            </div>
+        </section>
+
+        <!-- Dynamic Hidden File Input for Question Image Upload -->
+        <input type="file" id="uploadQuestionImgInput" accept="image/*" class="hidden" onchange="handleQuestionImgUpload(event)">
+
+    </main>
+
+    <!-- FOOTER NAV TO MISI 3 -->
+    <footer class="bg-white/80 border-t border-teal-200 py-3 px-4 text-center text-xs text-slate-600">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
+            <span>&copy; 2026 wira kesihatan • modul membaca pemulihan khas</span>
+            <a href="https://canva.link/zh2irn8sjl0tjbi" target="_blank" rel="noopener noreferrer" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 py-1.5 rounded-full shadow transition flex items-center space-x-1.5 btn-bounce">
+                <span>teruskan ke misi 3</span>
+                <i class="fa-solid fa-circle-arrow-right"></i>
+            </a>
+        </div>
+    </footer>
+
+
+    <!-- ==================== MODAL 1: MOD GURU & SETTING AUDIO ==================== -->
+    <div id="teacherModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-4 border-amber-300 p-5 md:p-6 space-y-5">
+            
+            <div class="flex items-center justify-between border-b pb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-amber-500 text-xl"></i>
+                    <h3 class="font-extrabold text-lg text-slate-800">panel kawalan guru & perakam suara</h3>
+                </div>
+                <button onclick="toggleTeacherPanel()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Global Instruction Voice Editor -->
+            <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 space-y-3">
+                <h4 class="font-extrabold text-sm text-amber-900 uppercase">1. arahan umum doktor aina (skrin utama)</h4>
+                <div class="flex items-center gap-2">
+                    <button id="recBtn-welcome" onclick="toggleVoiceRecorder('welcome')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center shadow btn-bounce">
+                        <i class="fa-solid fa-microphone mr-1"></i> <span id="recStatus-welcome">rakam suara</span>
+                    </button>
+                    <label class="bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold px-3 py-2 rounded-xl cursor-pointer shadow btn-bounce">
+                        <i class="fa-solid fa-upload mr-1"></i> upload audio
+                        <input type="file" accept="audio/*" class="hidden" onchange="handleAudioUpload(event, 'welcome')">
+                    </label>
+                    <button onclick="playAudio('welcome')" class="bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow btn-bounce">
+                        <i class="fa-solid fa-play mr-1"></i> uji audio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom BGM Upload -->
+            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 space-y-2">
+                <h4 class="font-extrabold text-sm text-emerald-900 uppercase">2. muat naik muzik latar belakang (bgm mp3)</h4>
+                <div class="flex items-center gap-2">
+                    <label class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl cursor-pointer shadow btn-bounce">
+                        <i class="fa-solid fa-file-audio mr-1"></i> pilih fail mp3 bgm
+                        <input type="file" accept="audio/*" class="hidden" onchange="handleBGMUpload(event)">
+                    </label>
+                    <span id="bgmFileName" class="text-xs text-slate-600 italic">menggunakan bgm asal</span>
+                </div>
+            </div>
+
+            <!-- Questions Text & Audio Recorder Tabs -->
+            <div class="space-y-4">
+                <h4 class="font-extrabold text-sm text-slate-800 uppercase">3. edit teks arahan & rakaman audio soalan</h4>
+
+                <!-- Tabs header -->
+                <div class="flex space-x-2 border-b">
+                    <button onclick="switchTeacherTab(1)" id="tabBtn-1" class="teacher-tab-btn py-2 px-4 text-xs font-bold border-b-2 border-amber-500 text-amber-600">aktiviti 1</button>
+                    <button onclick="switchTeacherTab(2)" id="tabBtn-2" class="teacher-tab-btn py-2 px-4 text-xs font-bold border-b-2 border-transparent text-slate-500">aktiviti 2</button>
+                    <button onclick="switchTeacherTab(3)" id="tabBtn-3" class="teacher-tab-btn py-2 px-4 text-xs font-bold border-b-2 border-transparent text-slate-500">aktiviti 3</button>
+                </div>
+
+                <!-- Tab Content Containers -->
+                <div id="teacherTabContent-1" class="teacher-tab-content space-y-3">
+                    <label class="block text-xs font-bold text-slate-700">teks arahan aktiviti 1:</label>
+                    <input type="text" id="editInstruction-1" value="heret suku kata beracak di bawah dan lepaskan mengikut urutan perkataan yang betul." onchange="updateInstructionText(1, this.value)" class="w-full p-2 border rounded-xl text-xs font-medium">
+
+                    <div id="teacherQuestionList-1" class="space-y-3 pt-2">
+                        <!-- Generated question audio editors for Act 1 -->
+                    </div>
+                </div>
+
+                <div id="teacherTabContent-2" class="teacher-tab-content hidden space-y-3">
+                    <label class="block text-xs font-bold text-slate-700">teks arahan aktiviti 2:</label>
+                    <input type="text" id="editInstruction-2" value="tekan butang sebutan guru dahulu untuk membuka pilihan jawapan, kemudian pilih perkataan yang betul." onchange="updateInstructionText(2, this.value)" class="w-full p-2 border rounded-xl text-xs font-medium">
+
+                    <div id="teacherQuestionList-2" class="space-y-3 pt-2">
+                        <!-- Generated question audio editors for Act 2 -->
+                    </div>
+                </div>
+
+                <div id="teacherTabContent-3" class="teacher-tab-content hidden space-y-3">
+                    <label class="block text-xs font-bold text-slate-700">teks arahan aktiviti 3:</label>
+                    <input type="text" id="editInstruction-3" value="dengar cikgu sebut suku kata satu per satu, kemudian ikut baca dan tekan butang saya dah baca." onchange="updateInstructionText(3, this.value)" class="w-full p-2 border rounded-xl text-xs font-medium">
+
+                    <div id="teacherQuestionList-3" class="space-y-3 pt-2">
+                        <!-- Generated question audio editors for Act 3 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Close Modal -->
+            <div class="pt-2 text-right">
+                <button onclick="toggleTeacherPanel()" class="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-5 py-2 rounded-xl text-xs shadow btn-bounce">
+                    simpan & tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: LAPORAN MARSAH / REKOD GURU ==================== -->
+    <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-4 border-sky-300 p-6 space-y-5">
+            <div class="flex items-center justify-between border-b pb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-invoice text-sky-500 text-xl"></i>
+                    <h3 class="font-extrabold text-lg text-slate-800">rekod pencapaian murid pemulihan khas</h3>
+                </div>
+                <button onclick="closeReportModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Print Printable Content -->
+            <div id="printableReport" class="space-y-4">
+                <div class="text-center border-b pb-3">
+                    <h4 class="font-extrabold text-teal-800 text-base">laporan prestasi membaca 'misi 2: jom baca, wira kesihatan!'</h4>
+                    <p class="text-xs text-slate-500">modul kesihatan • pemulihan khas bahasa melayu</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="reportStudentsGrid">
+                    <!-- Dynamic Student Report Cards Generated -->
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-3 border-t">
+                <button onclick="clearAllScores()" class="text-xs text-rose-600 font-bold hover:underline">
+                    <i class="fa-solid fa-trash mr-1"></i> reset semua rekod markah
+                </button>
+                <div class="space-x-2">
+                    <button onclick="window.print()" class="bg-sky-500 hover:bg-sky-600 text-white font-extrabold px-4 py-2 rounded-xl text-xs shadow btn-bounce">
+                        <i class="fa-solid fa-print mr-1"></i> cetak laporan
+                    </button>
+                    <button onclick="closeReportModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold px-4 py-2 rounded-xl text-xs btn-bounce">
+                        tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        /* ================= STATE & DATA STRUCTURES ================= */
+        
+        // Student profiles default state
+        const students = [
+            { id: 0, name: '🌸 nur amirah', avatar: 'https://placehold.co/120x120/fbcfe8/be185d?text=Nur+Amirah', score: 0, actCompleted: [false, false, false] },
+            { id: 1, name: '🎀 siti ayu', avatar: 'https://placehold.co/120x120/e9d8fd/6b21a8?text=Siti+Ayu', score: 0, actCompleted: [false, false, false] },
+            { id: 2, name: '💙 adam mikail', avatar: 'https://placehold.co/120x120/bae6fd/0369a1?text=Adam+Mikail', score: 0, actCompleted: [false, false, false] },
+            { id: 3, name: '💚 fateh haziq', avatar: 'https://placehold.co/120x120/a7f3d0/047857?text=Fateh+Haziq', score: 0, actCompleted: [false, false, false] }
+        ];
+
+        let selectedStudentIndex = null;
+        let doctorAvatar = 'https://placehold.co/150x150/a7f3d0/047857?text=Doktor+Aina';
+
+        // Audio storage dictionary (Key -> Audio Data URL or Blob URL)
+        const audioStore = {
+            welcome: null
+        };
+
+        // Instructions text storage
+        const instructionTexts = {
+            1: "heret suku kata beracak di bawah dan lepaskan mengikut urutan perkataan yang betul.",
+            2: "tekan butang sebutan guru dahulu untuk membuka pilihan jawapan, kemudian pilih perkataan yang betul.",
+            3: "dengar cikgu sebut suku kata satu per satu, kemudian ikut baca dan tekan butang 'saya dah baca'."
+        };
+
+        // Activity 1 Questions Data: (sihat, mulut, perut, jatuh)
+        const act1Questions = [
+            { id: 0, targetWord: "sihat", syllables: ["si", "hat"], img: "https://placehold.co/300x200/d1fae5/047857?text=sihat" },
+            { id: 1, targetWord: "mulut", syllables: ["mu", "lut"], img: "https://placehold.co/300x200/d1fae5/047857?text=mulut" },
+            { id: 2, targetWord: "perut", syllables: ["pe", "rut"], img: "https://placehold.co/300x200/d1fae5/047857?text=perut" },
+            { id: 3, targetWord: "jatuh", syllables: ["ja", "tuh"], img: "https://placehold.co/300x200/d1fae5/047857?text=jatuh" }
+        ];
+
+        // Activity 2 Questions Data: (sakit, lemah, lapar, darah)
+        const act2Questions = [
+            { id: 0, targetWord: "sakit", options: ["sakit", "sihat", "suka", "sakit"], img: "https://placehold.co/300x200/bae6fd/0369a1?text=sakit" },
+            { id: 1, targetWord: "lemah", options: ["lemah", "lama", "lebat", "lemar"], img: "https://placehold.co/300x200/bae6fd/0369a1?text=lemah" },
+            { id: 2, targetWord: "lapar", options: ["layar", "lapar", "larat", "lapas"], img: "https://placehold.co/300x200/bae6fd/0369a1?text=lapar" },
+            { id: 3, targetWord: "darah", options: ["darat", "dapur", "darah", "dalam"], img: "https://placehold.co/300x200/bae6fd/0369a1?text=darah" }
+        ];
+
+        // Activity 3 Questions Data: (ku-lit, ma-nis, ko-tor, ke-cil)
+        const act3Questions = [
+            { id: 0, targetWord: "kulit", syllables: ["ku", "lit"], img: "https://placehold.co/300x200/e9d8fd/6b21a8?text=kulit" },
+            { id: 1, targetWord: "manis", syllables: ["ma", "nis"], img: "https://placehold.co/300x200/e9d8fd/6b21a8?text=manis" },
+            { id: 2, targetWord: "kotor", syllables: ["ko", "tor"], img: "https://placehold.co/300x200/e9d8fd/6b21a8?text=kotor" },
+            { id: 3, targetWord: "kecil", syllables: ["ke", "cil"], img: "https://placehold.co/300x200/e9d8fd/6b21a8?text=kecil" }
+        ];
+
+        // Active State tracking
+        let currentAct = 1;
+        let currentQIndex = 0;
+        let act1PlacedSyllables = [];
+        let selectedTapTile = null;
+        let act2AudioListened = false;
+
+        // Recording MediaRecorder globals
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let currentRecordingKey = null;
+
+        // Pending image upload target helper
+        let uploadTargetQuestion = null; // { actNum, qIndex }
+        let uploadTargetStudentId = null;
+
+        /* ================= INITIALIZATION ================= */
+
+        window.onload = function() {
+            loadLocalStorageData();
+            initSynthesizedBGM();
+            buildTeacherPanelQuestionLists();
+            showScreen('home');
+        };
+
+        function loadLocalStorageData() {
+            try {
+                const savedStudents = localStorage.getItem('misi2_students');
+                if (savedStudents) {
+                    const parsed = JSON.parse(savedStudents);
+                    parsed.forEach((s, idx) => {
+                        if (students[idx]) {
+                            students[idx].score = s.score || 0;
+                            students[idx].actCompleted = s.actCompleted || [false, false, false];
+                            if (s.avatar) students[idx].avatar = s.avatar;
+                        }
+                    });
+                }
+
+                const savedDoctor = localStorage.getItem('misi2_doctor');
+                if (savedDoctor) {
+                    doctorAvatar = savedDoctor;
+                    document.getElementById('doctorAvatarImg').src = doctorAvatar;
+                }
+
+                // Update UI student avatars and scores
+                students.forEach((s, idx) => {
+                    document.getElementById(`studentImg-${idx}`).src = s.avatar;
+                    document.getElementById(`studentScore-${idx}`).innerText = `skor: ${s.score}/100`;
+                });
+            } catch (e) {
+                console.error("Local storage error:", e);
+            }
+        }
+
+        function saveLocalStorageData() {
+            try {
+                localStorage.setItem('misi2_students', JSON.stringify(students));
+                localStorage.setItem('misi2_doctor', doctorAvatar);
+            } catch (e) {
+                console.error("Failed to save local storage:", e);
+            }
+        }
+
+        /* ================= SCREEN NAVIGATION ================= */
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen-section').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById(`screen-${screenId}`);
+            if (target) target.classList.remove('hidden');
+
+            // Scroll top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectStudent(index) {
+            selectedStudentIndex = index;
+            const s = students[index];
+
+            // Update Header Active Student Pill
+            document.getElementById('pillAvatar').src = s.avatar;
+            document.getElementById('pillName').innerText = s.name;
+            document.getElementById('pillScore').innerText = `markah: ${s.score}/100`;
+            document.getElementById('activeStudentPill').classList.remove('hidden');
+
+            // Highlight chosen student card
+            document.querySelectorAll('.student-card').forEach((card, idx) => {
+                if (idx === index) {
+                    card.classList.add('ring-4', 'ring-teal-500', 'scale-105');
+                } else {
+                    card.classList.remove('ring-4', 'ring-teal-500', 'scale-105');
+                }
+            });
+
+            // Show activity menu
+            document.getElementById('activityMenu').classList.remove('hidden');
+            playSFX('click');
+        }
+
+        /* ================= AUDIO SYNTHESIZER & BGM ================= */
+
+        let audioCtx = null;
+        let bgmOscillator = null;
+        let bgmGain = null;
+        let isBgmPlaying = false;
+        let customBGMUrl = null;
+
+        function initSynthesizedBGM() {
+            // Built-in playful Web Audio synthesizer loop
+        }
+
+        function toggleBGM() {
+            const bgmAudio = document.getElementById('bgmAudio');
+            const btn = document.getElementById('bgmToggleBtn');
+
+            if (customBGMUrl) {
+                if (bgmAudio.paused) {
+                    bgmAudio.play();
+                    isBgmPlaying = true;
+                    btn.classList.add('bg-teal-200', 'text-teal-900');
+                } else {
+                    bgmAudio.pause();
+                    isBgmPlaying = false;
+                    btn.classList.remove('bg-teal-200', 'text-teal-900');
+                }
+                return;
+            }
+
+            // Web Audio fallback melodic synth
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            if (isBgmPlaying) {
+                if (bgmGain) bgmGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                isBgmPlaying = false;
+                btn.classList.remove('bg-teal-200', 'text-teal-900');
+            } else {
+                startSynthesizedMelody();
+                isBgmPlaying = true;
+                btn.classList.add('bg-teal-200', 'text-teal-900');
+            }
+        }
+
+        function startSynthesizedMelody() {
+            if (!audioCtx) return;
+            const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23]; // C5, E5, G5, C6, A5, F5
+            let noteIdx = 0;
+
+            if (window.bgmInterval) clearInterval(window.bgmInterval);
+
+            window.bgmInterval = setInterval(() => {
+                if (!isBgmPlaying) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(notes[noteIdx % notes.length], audioCtx.currentTime);
+                
+                const vol = parseFloat(document.getElementById('bgmVolume').value) * 0.15;
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.45);
+
+                noteIdx++;
+            }, 500);
+        }
+
+        function updateBGMVolume(val) {
+            const bgmAudio = document.getElementById('bgmAudio');
+            bgmAudio.volume = val;
+        }
+
+        function handleBGMUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                customBGMUrl = URL.createObjectURL(file);
+                const bgmAudio = document.getElementById('bgmAudio');
+                bgmAudio.src = customBGMUrl;
+                bgmAudio.play();
+                isBgmPlaying = true;
+                document.getElementById('bgmFileName').innerText = file.name;
+                document.getElementById('bgmToggleBtn').classList.add('bg-teal-200', 'text-teal-900');
+            }
+        }
+
+        /* ================= SOUND EFFECTS (SFX & SPEECH) ================= */
+
+        function playSFX(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'correct') {
+                    // Happy Bell / Chime
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3); // A5
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.5);
+
+                    // Confetti Effect
+                    confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
+                } else if (type === 'wrong') {
+                    // Soft Boop
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                } else if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.08);
+                }
+            } catch (e) {
+                console.log("Audio SFX Error:", e);
+            }
+        }
+
+        /* Speech Synthesizer Fallback for Teacher Voice */
+        function speakFallback(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop current speech
+                const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
+                utterance.lang = 'ms-MY';
+                utterance.rate = 0.85;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function playAudio(key, fallbackText = '') {
+            if (audioStore[key]) {
+                const a = new Audio(audioStore[key]);
+                a.play().catch(() => speakFallback(fallbackText));
+            } else if (fallbackText) {
+                speakFallback(fallbackText);
+            } else {
+                speakFallback("sila dengar sebutan ini");
+            }
+        }
+
+        /* ================= ACTIVATING ACTIVITIES ================= */
+
+        function startActivity(actNum) {
+            if (selectedStudentIndex === null) {
+                alert("Sila pilih profil murid terlebih dahulu!");
+                return;
+            }
+            currentAct = actNum;
+            currentQIndex = 0;
+
+            if (actNum === 1) {
+                showScreen('act1');
+                loadAct1Question(0);
+            } else if (actNum === 2) {
+                showScreen('act2');
+                loadAct2Question(0);
+            } else if (actNum === 3) {
+                showScreen('act3');
+                loadAct3Question(0);
+            }
+        }
+
+        function playCurrentQuestionAudio(actNum) {
+            const key = `act${actNum}_q${currentQIndex}`;
+            let fallbackText = instructionTexts[actNum];
+
+            if (actNum === 2) {
+                fallbackText = act2Questions[currentQIndex].targetWord;
+                // Unlock Act 2 choices
+                act2AudioListened = true;
+                const container = document.getElementById('act2OptionsContainer');
+                container.classList.remove('opacity-50', 'pointer-events-none');
+                document.getElementById('act2ListenBtn').classList.remove('animate-bounce');
+            }
+
+            playAudio(key, fallbackText);
+        }
+
+        /* ================= AKTIVITI 1 LOGIC (DRAG & DROP) ================= */
+
+        function loadAct1Question(index) {
+            currentQIndex = index;
+            const q = act1Questions[index];
+
+            document.getElementById('act1Progress').innerText = `soalan ${index + 1} / ${act1Questions.length}`;
+            document.getElementById('act1InstructionText').innerText = instructionTexts[1];
+            document.getElementById('act1QuestionImg').src = q.img;
+            document.getElementById('act1Feedback').innerText = '';
+
+            // Reset Placed Syllables
+            act1PlacedSyllables = new Array(q.syllables.length).fill(null);
+            selectedTapTile = null;
+
+            // Render Target Drop Boxes
+            const dropZone = document.getElementById('act1DropZone');
+            dropZone.innerHTML = '';
+            for (let i = 0; i < q.syllables.length; i++) {
+                const box = document.createElement('div');
+                box.className = 'drop-target w-20 h-16 md:w-24 md:h-20 bg-white rounded-2xl border-2 border-dashed border-emerald-400 flex items-center justify-center font-extrabold text-xl text-emerald-800 shadow-inner cursor-pointer';
+                box.dataset.slotIndex = i;
+                box.onclick = () => handleDropZoneClick(i);
+
+                // Drag and Drop Events (Desktop & Touch)
+                box.ondragover = (e) => { e.preventDefault(); box.classList.add('drag-over'); };
+                box.ondragleave = () => box.classList.remove('drag-over');
+                box.ondrop = (e) => handleDropEvent(e, i);
+
+                dropZone.appendChild(box);
+            }
+
+            // Shuffle Syllables for Scramble
+            const shuffled = [...q.syllables].sort(() => Math.random() - 0.5);
+
+            // Render Source Syllables Tiles
+            const sourceZone = document.getElementById('act1SourceZone');
+            sourceZone.innerHTML = '';
+            shuffled.forEach((syl, idx) => {
+                const tile = document.createElement('div');
+                tile.className = 'draggable-item px-5 py-3 bg-white text-emerald-900 border-2 border-emerald-300 rounded-2xl font-extrabold text-xl shadow-md hover:bg-emerald-100 flex items-center justify-center select-none';
+                tile.innerText = syl;
+                tile.draggable = true;
+                tile.dataset.syllable = syl;
+                tile.dataset.tileId = `tile-${idx}`;
+
+                // Drag Events
+                tile.ondragstart = (e) => { e.dataTransfer.setData('text/plain', syl); };
+
+                // Tap To Place Alternative for Mobile/Accessibility
+                tile.onclick = () => handleTileTapSelect(tile, syl);
+
+                sourceZone.appendChild(tile);
+            });
+        }
+
+        function handleTileTapSelect(tileElement, syllable) {
+            document.querySelectorAll('.draggable-item').forEach(t => t.classList.remove('selected-tap'));
+            selectedTapTile = { element: tileElement, syllable: syllable };
+            tileElement.classList.add('selected-tap');
+
+            // Auto place if first empty slot exists
+            const emptyIdx = act1PlacedSyllables.findIndex(s => s === null);
+            if (emptyIdx !== -1) {
+                placeSyllablesInSlot(syllable, emptyIdx, tileElement);
+            }
+        }
+
+        function handleDropZoneClick(slotIdx) {
+            if (act1PlacedSyllables[slotIdx] !== null) {
+                // Return syllable to source
+                const syl = act1PlacedSyllables[slotIdx];
+                act1PlacedSyllables[slotIdx] = null;
+
+                // Restore hidden tile
+                const tiles = document.querySelectorAll('.draggable-item');
+                tiles.forEach(t => {
+                    if (t.dataset.syllable === syl && t.style.visibility === 'hidden') {
+                        t.style.visibility = 'visible';
+                    }
+                });
+
+                renderAct1Slots();
+            }
+        }
+
+        function handleDropEvent(e, slotIdx) {
+            e.preventDefault();
+            const syl = e.dataTransfer.getData('text/plain');
+            if (!syl) return;
+
+            // Find matching visible tile
+            let matchingTile = null;
+            document.querySelectorAll('.draggable-item').forEach(t => {
+                if (t.dataset.syllable === syl && t.style.visibility !== 'hidden') {
+                    matchingTile = t;
+                }
+            });
+
+            placeSyllablesInSlot(syl, slotIdx, matchingTile);
+        }
+
+        function placeSyllablesInSlot(syl, slotIdx, tileElement) {
+            act1PlacedSyllables[slotIdx] = syl;
+            if (tileElement) tileElement.style.visibility = 'hidden';
+            selectedTapTile = null;
+            renderAct1Slots();
+        }
+
+        function renderAct1Slots() {
+            const dropZone = document.getElementById('act1DropZone');
+            const boxes = dropZone.querySelectorAll('.drop-target');
+
+            boxes.forEach((box, idx) => {
+                const val = act1PlacedSyllables[idx];
+                if (val) {
+                    box.innerText = val;
+                    box.classList.remove('border-dashed', 'bg-white');
+                    box.classList.add('bg-emerald-200', 'border-solid', 'border-emerald-500');
+                } else {
+                    box.innerText = '';
+                    box.classList.add('border-dashed', 'bg-white');
+                    box.classList.remove('bg-emerald-200', 'border-solid', 'border-emerald-500');
+                }
+            });
+        }
+
+        function resetAct1CurrentQuestion() {
+            loadAct1Question(currentQIndex);
+        }
+
+        function checkAct1Answer() {
+            const q = act1Questions[currentQIndex];
+            const formedWord = act1PlacedSyllables.join('');
+
+            const feedback = document.getElementById('act1Feedback');
+
+            if (formedWord === q.targetWord) {
+                playSFX('correct');
+                feedback.innerHTML = '<span class="text-emerald-600">tahniah! jawapan anda betul! 🎉</span>';
+                
+                setTimeout(() => {
+                    if (currentQIndex + 1 < act1Questions.length) {
+                        loadAct1Question(currentQIndex + 1);
+                    } else {
+                        completeActivity(1);
+                    }
+                }, 1300);
+            } else {
+                playSFX('wrong');
+                feedback.innerHTML = '<span class="text-rose-500">cuba lagi! susun suku kata dengan betul. ❌</span>';
+            }
+        }
+
+        /* ================= AKTIVITI 2 LOGIC (BACA & PILIH) ================= */
+
+        function loadAct2Question(index) {
+            currentQIndex = index;
+            const q = act2Questions[index];
+
+            document.getElementById('act2Progress').innerText = `soalan ${index + 1} / ${act2Questions.length}`;
+            document.getElementById('act2InstructionText').innerText = instructionTexts[2];
+            document.getElementById('act2QuestionImg').src = q.img;
+            document.getElementById('act2Feedback').innerText = '';
+
+            // Lock Options until teacher audio played
+            act2AudioListened = false;
+            const container = document.getElementById('act2OptionsContainer');
+            container.classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('act2ListenBtn').classList.add('animate-bounce');
+
+            // Render Options
+            container.innerHTML = '';
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-white hover:bg-sky-100 text-sky-900 border-2 border-sky-300 font-extrabold text-xl py-3 px-4 rounded-2xl shadow transition btn-bounce';
+                btn.innerText = opt;
+                btn.onclick = () => selectAct2Option(opt, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function selectAct2Option(optionText, btnElement) {
+            const q = act2Questions[currentQIndex];
+            const feedback = document.getElementById('act2Feedback');
+
+            if (optionText === q.targetWord) {
+                playSFX('correct');
+                btnElement.classList.add('bg-emerald-400', 'text-white', 'border-emerald-600');
+                feedback.innerHTML = '<span class="text-emerald-600">pandai! jawapan betul! 🌟</span>';
+
+                // Automatic 1.2s transition
+                setTimeout(() => {
+                    if (currentQIndex + 1 < act2Questions.length) {
+                        loadAct2Question(currentQIndex + 1);
+                    } else {
+                        completeActivity(2);
+                    }
+                }, 1200);
+            } else {
+                playSFX('wrong');
+                btnElement.classList.add('bg-rose-200', 'border-rose-400');
+                feedback.innerHTML = '<span class="text-rose-500">bukan perkataan ini. dengar sebutan lagi sekali! ❌</span>';
+            }
+        }
+
+        /* ================= AKTIVITI 3 LOGIC (SEBUT SUKU KATA) ================= */
+
+        function loadAct3Question(index) {
+            currentQIndex = index;
+            const q = act3Questions[index];
+
+            document.getElementById('act3Progress').innerText = `soalan ${index + 1} / ${act3Questions.length}`;
+            document.getElementById('act3InstructionText').innerText = instructionTexts[3];
+            document.getElementById('act3QuestionImg').src = q.img;
+            document.getElementById('act3Feedback').innerText = '';
+
+            // Render Syllable audio buttons
+            const container = document.getElementById('act3SyllablesContainer');
+            container.innerHTML = '';
+
+            q.syllables.forEach((syl, sylIdx) => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-purple-500 hover:bg-purple-600 text-white font-extrabold text-2xl px-6 py-4 rounded-2xl shadow-lg border-b-4 border-purple-700 transition btn-bounce flex items-center space-x-2';
+                btn.innerHTML = `<i class="fa-solid fa-volume-high text-yellow-300 text-lg"></i><span>${syl}</span>`;
+                btn.onclick = () => playSyllableAudio(sylIdx, syl);
+                container.appendChild(btn);
+
+                if (sylIdx < q.syllables.length - 1) {
+                    const plus = document.createElement('span');
+                    plus.className = 'text-2xl font-bold text-purple-400';
+                    plus.innerText = '+';
+                    container.appendChild(plus);
+                }
+            });
+
+            // Set Full Word
+            document.getElementById('act3FullWord').innerText = `${q.syllables.join(' + ')} = ${q.targetWord}`;
+        }
+
+        function playSyllableAudio(sylIdx, fallbackText) {
+            const key = `act3_q${currentQIndex}_syl${sylIdx}`;
+            playAudio(key, fallbackText);
+        }
+
+        function markAct3Complete() {
+            playSFX('correct');
+            const feedback = document.getElementById('act3Feedback');
+            feedback.innerHTML = '<span class="text-purple-700">bagus sekali! bacaan yang sangat jelas! 👏</span>';
+
+            setTimeout(() => {
+                if (currentQIndex + 1 < act3Questions.length) {
+                    loadAct3Question(currentQIndex + 1);
+                } else {
+                    completeActivity(3);
+                }
+            }, 1200);
+        }
+
+        /* ================= COMPLETION & SCORING ================= */
+
+        function completeActivity(actNum) {
+            if (selectedStudentIndex !== null) {
+                const s = students[selectedStudentIndex];
+                if (!s.actCompleted[actNum - 1]) {
+                    s.actCompleted[actNum - 1] = true;
+                    // Add 33 atau 34 markah
+                    if (actNum === 1) s.score += 33;
+                    else if (actNum === 2) s.score += 33;
+                    else if (actNum === 3) s.score += 34;
+
+                    if (s.score > 100) s.score = 100;
+                    saveLocalStorageData();
+                }
+
+                // Update Pill Score
+                document.getElementById('pillScore').innerText = `markah: ${s.score}/100`;
+                document.getElementById(`studentScore-${selectedStudentIndex}`).innerText = `skor: ${s.score}/100`;
+            }
+
+            alert(`Tahniah! Anda telah melengkapkan Aktiviti ${actNum}! 🎉`);
+            showScreen('home');
+        }
+
+        /* ================= UPLOAD CUSTOM IMAGES LOGIC ================= */
+
+        function handleDoctorUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    doctorAvatar = evt.target.result;
+                    document.getElementById('doctorAvatarImg').src = doctorAvatar;
+                    saveLocalStorageData();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function triggerStudentUpload(studentId) {
+            uploadTargetStudentId = studentId;
+            document.getElementById('uploadStudentInput').click();
+        }
+
+        function handleStudentUpload(e) {
+            const file = e.target.files[0];
+            if (file && uploadTargetStudentId !== null) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    students[uploadTargetStudentId].avatar = evt.target.result;
+                    document.getElementById(`studentImg-${uploadTargetStudentId}`).src = evt.target.result;
+                    if (selectedStudentIndex === uploadTargetStudentId) {
+                        document.getElementById('pillAvatar').src = evt.target.result;
+                    }
+                    saveLocalStorageData();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function triggerQuestionImgUpload(actNum) {
+            uploadTargetQuestion = { actNum: actNum, qIndex: currentQIndex };
+            document.getElementById('uploadQuestionImgInput').click();
+        }
+
+        function handleQuestionImgUpload(e) {
+            const file = e.target.files[0];
+            if (file && uploadTargetQuestion) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const imgUrl = evt.target.result;
+                    const { actNum, qIndex } = uploadTargetQuestion;
+
+                    if (actNum === 1) {
+                        act1Questions[qIndex].img = imgUrl;
+                        document.getElementById('act1QuestionImg').src = imgUrl;
+                    } else if (actNum === 2) {
+                        act2Questions[qIndex].img = imgUrl;
+                        document.getElementById('act2QuestionImg').src = imgUrl;
+                    } else if (actNum === 3) {
+                        act3Questions[qIndex].img = imgUrl;
+                        document.getElementById('act3QuestionImg').src = imgUrl;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        /* ================= TEACHER PANEL & RECORDING LOGIC ================= */
+
+        function toggleTeacherPanel() {
+            const modal = document.getElementById('teacherModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function switchTeacherTab(tabNum) {
+            document.querySelectorAll('.teacher-tab-btn').forEach((btn, idx) => {
+                if (idx + 1 === tabNum) {
+                    btn.classList.add('border-amber-500', 'text-amber-600');
+                    btn.classList.remove('border-transparent', 'text-slate-500');
+                } else {
+                    btn.classList.remove('border-amber-500', 'text-amber-600');
+                    btn.classList.add('border-transparent', 'text-slate-500');
+                }
+            });
+
+            document.querySelectorAll('.teacher-tab-content').forEach((cnt, idx) => {
+                if (idx + 1 === tabNum) cnt.classList.remove('hidden');
+                else cnt.classList.add('hidden');
+            });
+        }
+
+        function updateInstructionText(actNum, text) {
+            instructionTexts[actNum] = text;
+        }
+
+        function buildTeacherPanelQuestionLists() {
+            // Build Act 1 Editors
+            const list1 = document.getElementById('teacherQuestionList-1');
+            list1.innerHTML = '';
+            act1Questions.forEach((q, idx) => {
+                list1.appendChild(createQuestionAudioControlRow(1, idx, q.targetWord));
+            });
+
+            // Build Act 2 Editors
+            const list2 = document.getElementById('teacherQuestionList-2');
+            list2.innerHTML = '';
+            act2Questions.forEach((q, idx) => {
+                list2.appendChild(createQuestionAudioControlRow(2, idx, q.targetWord));
+            });
+
+            // Build Act 3 Editors (Include syllable sub-recordings)
+            const list3 = document.getElementById('teacherQuestionList-3');
+            list3.innerHTML = '';
+            act3Questions.forEach((q, idx) => {
+                const box = document.createElement('div');
+                box.className = 'p-3 bg-purple-50 rounded-2xl border border-purple-200 space-y-2';
+                box.innerHTML = `<div class="font-bold text-xs text-purple-900">soalan ${idx+1}: ${q.targetWord}</div>`;
+                
+                // Audio per syllable
+                q.syllables.forEach((syl, sylIdx) => {
+                    const key = `act3_q${idx}_syl${sylIdx}`;
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between text-xs bg-white p-2 rounded-xl border';
+                    row.innerHTML = `
+                        <span class="font-extrabold text-purple-700">suku kata: "${syl}"</span>
+                        <div class="flex gap-1">
+                            <button id="recBtn-${key}" onclick="toggleVoiceRecorder('${key}')" class="bg-rose-500 hover:bg-rose-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs">
+                                <i class="fa-solid fa-microphone"></i> <span id="recStatus-${key}">rakam</span>
+                            </button>
+                            <label class="bg-sky-500 text-white font-bold px-2 py-1 rounded-lg cursor-pointer">
+                                <i class="fa-solid fa-upload"></i>
+                                <input type="file" accept="audio/*" class="hidden" onchange="handleAudioUpload(event, '${key}')">
+                            </label>
+                            <button onclick="playAudio('${key}', '${syl}')" class="bg-teal-500 text-white font-bold px-2 py-1 rounded-lg">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                        </div>
+                    `;
+                    box.appendChild(row);
+                });
+                list3.appendChild(box);
+            });
+        }
+
+        function createQuestionAudioControlRow(actNum, qIndex, word) {
+            const key = `act${actNum}_q${qIndex}`;
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border text-xs';
+            div.innerHTML = `
+                <span class="font-extrabold text-slate-700">soalan ${qIndex+1} (${word})</span>
+                <div class="flex items-center gap-1.5">
+                    <button id="recBtn-${key}" onclick="toggleVoiceRecorder('${key}')" class="bg-rose-500 hover:bg-rose-600 text-white font-bold px-2.5 py-1 rounded-lg flex items-center">
+                        <i class="fa-solid fa-microphone mr-1"></i> <span id="recStatus-${key}">rakam</span>
+                    </button>
+                    <label class="bg-sky-500 hover:bg-sky-600 text-white font-bold px-2.5 py-1 rounded-lg cursor-pointer">
+                        <i class="fa-solid fa-upload mr-1"></i> upload
+                        <input type="file" accept="audio/*" class="hidden" onchange="handleAudioUpload(event, '${key}')">
+                    </label>
+                    <button onclick="playAudio('${key}', '${word}')" class="bg-teal-500 hover:bg-teal-600 text-white font-bold px-2.5 py-1 rounded-lg">
+                        <i class="fa-solid fa-play mr-1"></i> uji
+                    </button>
+                </div>
+            `;
+            return div;
+        }
+
+        /* Recorder API Implementation */
+        async function toggleVoiceRecorder(key) {
+            const statusSpan = document.getElementById(`recStatus-${key}`);
+
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                if (statusSpan) statusSpan.innerText = 'rakam';
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                currentRecordingKey = key;
+
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    audioStore[key] = URL.createObjectURL(audioBlob);
+                    alert(`Audio untuk '${key}' berjaya dirakam!`);
+                    if (statusSpan) statusSpan.innerText = 'rakam lagi';
+                };
+
+                mediaRecorder.start();
+                if (statusSpan) statusSpan.innerText = 'berhenti...';
+            } catch (err) {
+                alert("Ralat mengakses mikrofon: " + err.message);
+            }
+        }
+
+        function handleAudioUpload(e, key) {
+            const file = e.target.files[0];
+            if (file) {
+                audioStore[key] = URL.createObjectURL(file);
+                alert(`Fail audio '${file.name}' berjaya dimuat naik untuk '${key}'!`);
+            }
+        }
+
+        /* ================= REPORT & PRINTING LOGIC ================= */
+
+        function showReportModal() {
+            const container = document.getElementById('reportStudentsGrid');
+            container.innerHTML = '';
+
+            students.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'p-3.5 bg-slate-50 rounded-2xl border flex items-center space-x-3';
+                card.innerHTML = `
+                    <img src="${s.avatar}" class="w-12 h-12 rounded-xl object-cover border">
+                    <div class="flex-grow">
+                        <div class="font-extrabold text-xs text-slate-800">${s.name}</div>
+                        <div class="text-[10px] text-slate-500">
+                            Aktiviti 1: ${s.actCompleted[0] ? '✅' : '❌'} | 
+                            Aktiviti 2: ${s.actCompleted[1] ? '✅' : '❌'} | 
+                            Aktiviti 3: ${s.actCompleted[2] ? '✅' : '❌'}
+                        </div>
+                    </div>
+                    <div class="font-black text-sm text-teal-700 bg-teal-100 px-2.5 py-1 rounded-xl">
+                        ${s.score}/100
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+        }
+
+        function clearAllScores() {
+            if (confirm("Adakah anda pasti untuk menetapkan semula semua markah murid?")) {
+                students.forEach(s => {
+                    s.score = 0;
+                    s.actCompleted = [false, false, false];
+                });
+                saveLocalStorageData();
+                showReportModal();
+                if (selectedStudentIndex !== null) {
+                    document.getElementById('pillScore').innerText = `markah: 0/100`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
